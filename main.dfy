@@ -3,10 +3,12 @@
 */
 
 //Main Class
-class Main {
-  static method main() {
-    
-    var carPark := new CarPark(5, 10, false);
+class MainDriver {
+  static method Main() {
+
+    var carPark := new CarPark(10, 3, false);
+    carPark.clearCarPark();
+    carPark.printParkingPlan();
   }
 }
 
@@ -17,24 +19,70 @@ class {:autocontracts} CarPark{
   const normalSpaces: int;
   const isWeekEnd: bool;
   const parkingMargin: int;
-  var carsInNormalSpaces: int;
-  var carsInReservedSpaces: int;
+  const columns: int;
+  var carsInNormalSpaces: array<bool>;
+  var carsInReservedSpaces: array<bool>;
 
   //Constructor for setting the car park for a new day.
   constructor(totalFreeSpaces: int, reservedSpaces: int, isWeekEnd: bool)
-  {          
+    requires totalFreeSpaces > reservedSpaces;
+    requires totalFreeSpaces > 0 && reservedSpaces > 0
+    ensures normalSpaces > 0;
+    ensures isWeekEnd ==> normalSpaces == totalFreeSpaces;
+    ensures !isWeekEnd ==> normalSpaces == totalFreeSpaces - reservedSpaces;
+  {
     this.totalFreeSpaces := totalFreeSpaces;
     this.reservedSpaces := reservedSpaces;
     this.isWeekEnd := isWeekEnd;
     parkingMargin := 5;
-    carsInNormalSpaces := 0;
-    carsInReservedSpaces := 0;
 
     if isWeekEnd {
       normalSpaces := totalFreeSpaces;
+      carsInNormalSpaces := new bool[totalFreeSpaces];
     }
     else{
       normalSpaces := totalFreeSpaces - reservedSpaces;
+      carsInNormalSpaces := new bool[totalFreeSpaces - reservedSpaces];
+    }
+
+    carsInReservedSpaces := new bool[reservedSpaces];
+  }
+
+  method clearCarPark(){
+    clearNormalSpaces();
+    clearReservedSpaces();
+  }
+
+
+  method countFreeSpaces(arr: array<bool>) returns (result: int)
+    requires arr.Length > 0;
+    ensures result >= 0;
+  {
+    var count := 0;
+
+    for i := 0 to arr.Length{
+      if(!arr[i]){
+        count := count + 1;
+      }
+    }
+
+    return count;
+  }
+
+  method clearNormalSpaces()
+    requires true
+    modifies carsInNormalSpaces
+  {
+    for i := 0 to carsInNormalSpaces.Length{
+      carsInNormalSpaces[i] := false;
+    }
+  }
+
+  method clearReservedSpaces()
+    modifies carsInReservedSpaces
+  {
+    for i := 0 to carsInReservedSpaces.Length{
+      carsInReservedSpaces[i] := false;
     }
   }
 
@@ -62,21 +110,47 @@ class {:autocontracts} CarPark{
   //to remove and crush remaining cars at closing time.
   method closeCarPark(){}
 
-
-  //to display car parks in rows, indicating the state of each space.
-  method printParkingPlan(){}
-
-  method canSubscriptionCarEnter() returns (result: bool){
-    return carsInReservedSpaces < (reservedSpaces - parkingMargin);
-  }
-
-  method canNormalCarEnter() returns (result: bool){
-    return carsInNormalSpaces < (normalSpaces - parkingMargin);
-  }
-
+  
   //State invarients of the class
   /////////////////////////////////
   predicate valid(){
-    carsInNormalSpaces > 0
+    carsInReservedSpaces.Length > 0 &&
+    carsInNormalSpaces.Length > 0 && 
+    totalFreeSpaces > reservedSpaces &&
+    totalFreeSpaces > 0 && reservedSpaces > 0 && 
+    normalSpaces > 0 && 
+    (isWeekEnd ==> normalSpaces == totalFreeSpaces) &&
+    (isWeekEnd ==> normalSpaces == totalFreeSpaces - reservedSpaces)
+  }
+
+  //Method for printing the Car Park given the Columns 
+  ////////////////////////////////////////////////////
+  method printParkingPlan()
+  {
+    var columns: int := 5;
+    print "\n\n";
+    print "\t[NORMAL AREA]\n\n";
+    printArray(carsInNormalSpaces, columns);
+    
+    print "\n\t[RESERVED AREA]\n\n";
+    printArray(carsInReservedSpaces, columns);
+    print "\n\n";
+  }
+
+  function toString(val: bool): string{
+    if val then "1" else "0"
+  }
+
+  method printArray(arr: array<bool>, columns: int)
+    requires columns > 1
+  {
+    for i := 0 to arr.Length {
+      print "\t" + toString(arr[i]) + "\t";
+
+      if(i % (columns-1) == 0 && i > 0){
+        print "\n\n";
+      }
+    }
+    print "\n\n";
   }
 }
