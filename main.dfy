@@ -7,16 +7,15 @@ class MainDriver {
   static method Main() {
 
     var carPark := new CarPark(10, 3, false);
-    carPark.clearCarPark();
     carPark.printParkingPlan();
   }
 }
 
 // CarPark Class
-class {:autocontracts} CarPark{
+class CarPark{
   const totalFreeSpaces: int;
   const reservedSpaces: int;
-  const normalSpaces: int;
+  var normalSpaces: int;
   const isWeekEnd: bool;
   const parkingMargin: int;
   const columns: int;
@@ -27,35 +26,32 @@ class {:autocontracts} CarPark{
   constructor(totalFreeSpaces: int, reservedSpaces: int, isWeekEnd: bool)
     requires totalFreeSpaces > reservedSpaces;
     requires totalFreeSpaces > 0 && reservedSpaces > 0
-    ensures normalSpaces > 0;
-    ensures isWeekEnd ==> normalSpaces == totalFreeSpaces;
-    ensures !isWeekEnd ==> normalSpaces == totalFreeSpaces - reservedSpaces;
+    ensures Valid();
+    ensures fresh(carsInNormalSpaces) && fresh(carsInReservedSpaces);
   {
     this.totalFreeSpaces := totalFreeSpaces;
     this.reservedSpaces := reservedSpaces;
     this.isWeekEnd := isWeekEnd;
     parkingMargin := 5;
 
+    new;
     if isWeekEnd {
       normalSpaces := totalFreeSpaces;
-      carsInNormalSpaces := new bool[totalFreeSpaces];
     }
     else{
       normalSpaces := totalFreeSpaces - reservedSpaces;
-      carsInNormalSpaces := new bool[totalFreeSpaces - reservedSpaces];
     }
-
+    carsInNormalSpaces := new bool[normalSpaces];
     carsInReservedSpaces := new bool[reservedSpaces];
-  }
-
-  method clearCarPark(){
     clearNormalSpaces();
     clearReservedSpaces();
   }
 
 
   method countFreeSpaces(arr: array<bool>) returns (result: int)
+    requires Valid();
     requires arr.Length > 0;
+    ensures Valid();
     ensures result >= 0;
   {
     var count := 0;
@@ -70,57 +66,105 @@ class {:autocontracts} CarPark{
   }
 
   method clearNormalSpaces()
-    requires true
+    requires Valid();
+    ensures Valid();
+    ensures forall i :: 0 <= i < carsInNormalSpaces.Length ==> !carsInNormalSpaces[i];
     modifies carsInNormalSpaces
   {
-    for i := 0 to carsInNormalSpaces.Length{
+    for i := 0 to carsInNormalSpaces.Length
+      invariant i <= carsInNormalSpaces.Length;
+      invariant forall j :: 0 <= j < i ==> !carsInNormalSpaces[j];
+    {
       carsInNormalSpaces[i] := false;
     }
   }
 
   method clearReservedSpaces()
+    requires Valid();
+    ensures Valid();
+    ensures forall i :: 0 <= i < carsInReservedSpaces.Length ==> !carsInReservedSpaces[i];
     modifies carsInReservedSpaces
   {
-    for i := 0 to carsInReservedSpaces.Length{
+    for i := 0 to carsInReservedSpaces.Length
+      invariant i <= carsInReservedSpaces.Length;
+      invariant forall j :: 0 <= j < i ==> !carsInReservedSpaces[j];
+    {
       carsInReservedSpaces[i] := false;
     }
   }
 
   //To allow any car without registration to enter the car park.
-  method enterCarPark(){}
+  method enterCarPark()
+    requires Valid();
+    ensures Valid();
+  {
+
+  }
 
   // to allow any car from any area to leave the car park.
-  method leaveCarPark(){}
+  method leaveCarPark()
+    requires Valid();
+    ensures Valid();
+  {
+
+  }
 
   //to report on the number of non-reserved free spaces currently available.
-  method checkAvailability(){}
+  method checkAvailability()
+    requires Valid();
+    ensures Valid();
+  {
+
+  }
 
   // to allow a car with a subscription to enter the car park's reservered area on a weekday,
   // or to enter the carpark generally on a weekend day.
-  method enterReservedCarPark(){}
+  method enterReservedCarPark()
+    requires Valid();
+    ensures Valid();
+  {
+
+  }
 
   // to allow a car to be registered as a having a reserved space when the owner pays the subscription,
   // AS LONG AS SUBSCRIPTIONS ARE AVAIALBLE
-  method makeSubscription(){}
+  method makeSubscription()
+    requires Valid();
+    ensures Valid();
+  {
+
+  }
 
   // to remove parking restrictions on the reserved spaces
   // AT THE WEEKEND
-  method openReservedArea(){}
+  method openReservedArea()
+    requires Valid();
+    ensures Valid();
+  {
+
+  }
 
   //to remove and crush remaining cars at closing time.
-  method closeCarPark(){}
+  method closeCarPark()
+    requires Valid();
+    ensures Valid();
+  {
+
+  }
 
   
   //State invarients of the class
   /////////////////////////////////
-  predicate valid(){
+  predicate Valid()
+    reads this;
+  {
     carsInReservedSpaces.Length > 0 &&
     carsInNormalSpaces.Length > 0 && 
     totalFreeSpaces > reservedSpaces &&
     totalFreeSpaces > 0 && reservedSpaces > 0 && 
     normalSpaces > 0 && 
     (isWeekEnd ==> normalSpaces == totalFreeSpaces) &&
-    (isWeekEnd ==> normalSpaces == totalFreeSpaces - reservedSpaces)
+    (!isWeekEnd ==> normalSpaces == totalFreeSpaces - reservedSpaces)
   }
 
   //Method for printing the Car Park given the Columns 
