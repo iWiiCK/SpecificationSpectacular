@@ -1,5 +1,6 @@
 /*
-@author Heshan Wickramaratne
+  @author Heshan Wickramaratne
+  Uclan ID: G20863503
 */
 
 //Main Class
@@ -7,8 +8,11 @@ class MainDriver {
   static method Main() {
 
     var carPark := new CarPark(20, 10, 5, false);
-    carPark.printParkingPlan();
-    carPark.enterCarPark(1, "abs");
+    carPark.enterCarPark("abc");
+    carPark.enterCarPark("cdf");
+    carPark.enterCarPark("fgh");
+    carPark.enterCarPark("hij");
+    carPark.leaveCarPark("fgh");
     carPark.printParkingPlan();
   }
 }
@@ -24,11 +28,13 @@ class CarPark{
   var subscriptions: array<string>;
   var isWeekend: bool;
 
+  var totalAvailableSpaces: int;
   var normalCarCount: int;
   var reservedCarCount: int;
   var subscriptionCount: int;
 
   //Constructor for setting the car park for a new day.
+  ////////////////////////////////////////////////////////////
   /*
     Pre-conditions
     ---------------
@@ -67,6 +73,7 @@ class CarPark{
     openReservedArea(isWeekend);
     clearNormalSpaces();
     clearReservedSpaces();
+    totalAvailableSpaces := checkAvailability();
   }
 
   //State invarients of the class
@@ -79,45 +86,80 @@ class CarPark{
     normalSpaces > reservedSpaces &&
     normalSpaces > 0 && 
     reservedSpaces > 0 &&
+    parkingMargin < reservedSpaces &&
     normalCarCount <= normalSpaces && normalCarCount >= 0 &&
     reservedCarCount <= reservedSpaces && reservedCarCount >= 0 &&
     subscriptionCount <= subscriptions.Length && subscriptionCount >= 0 
   }
 
-  predicate CanEnterCarPark()
+  //To allow any car without registration to enter the car park.
+  /////////////////////////////////////////////////////////////////
+  /*
+    Pre-Conditions
+    --------------
+    1. Valid()
+
+    Post-Conditions
+    ---------------
+    1. Valid()
+  */
+  method enterCarPark(vehicleNum: string)
     requires Valid();
     ensures Valid();
-    reads this;
+    modifies this.carsInNormalSpaces, this`normalCarCount, this`totalAvailableSpaces;
   {
-    if(isWeekend)
-    then (((normalSpaces + reservedSpaces) - parkingMargin) > (normalCarCount + reservedCarCount))
-    else ((normalSpaces - parkingMargin) > normalCarCount)
+    var slot := getFreeSlot(carsInNormalSpaces);
+    var currentAvailability := checkAvailability();
+    if(slot > -1 && currentAvailability > parkingMargin){
+      carsInNormalSpaces[slot] := vehicleNum;
+      totalAvailableSpaces := currentAvailability;
+    }
+    else{
+      print "\n\n\t>>> CAR PARK FULL ! :: Vehicle[" + vehicleNum + "] wasn't allowed to Enter\n\n";
+    }
   }
 
-  //To allow any car without registration to enter the car park.
-  method enterCarPark(slot: int, vehicleNum: string)
-    requires Valid();
-    requires CanEnterCarPark();
-    requires normalCarCount < normalSpaces;
-    requires slot >= 0 && slot < carsInNormalSpaces.Length;
-    requires carsInNormalSpaces[slot] == "-";
-    ensures Valid();
-    ensures carsInNormalSpaces[slot] == vehicleNum;
-    modifies this.carsInNormalSpaces, this`normalCarCount;
-  {
-    carsInNormalSpaces[slot] := vehicleNum;
-    normalCarCount := normalCarCount + 1;
-  }
 
   // to allow any car from any area to leave the car park.
-  method leaveCarPark()
-    requires Valid();
-    ensures Valid();
-  {
+  ///////////////////////////////////////////////////////////
+  /*
+    Pre-Conditions
+    --------------
+    1. Valid()
+    2. Vehicle MUST be in the Normal area or the reserved Area
 
+    Post-Conditions
+    ---------------
+    1. Valid()
+  */
+  method leaveCarPark(vehicleNum: string)
+    requires Valid();
+    // requires (exists i :: 0 <= i < carsInNormalSpaces.Length ==> carsInNormalSpaces[i] == vehicleNum) || 
+    //   (exists i :: 0 <= i < carsInReservedSpaces.Length ==> carsInReservedSpaces[i] == vehicleNum);
+    ensures Valid();
+    modifies this.carsInNormalSpaces, this`normalCarCount, this`totalAvailableSpaces, this.carsInReservedSpaces;
+  {
+    var slot := getVehicleFrom(carsInNormalSpaces, vehicleNum);
+    if(slot > -1){
+      carsInNormalSpaces[slot] := "-";
+      totalAvailableSpaces := checkAvailability();
+      print "\n\n\t>>> Vehicle [" + vehicleNum + "] Left from Normal Space";
+    }
+    else{
+      slot := getVehicleFrom(carsInReservedSpaces, vehicleNum);
+      if(slot > -1){
+        carsInReservedSpaces[slot] := "-";
+        totalAvailableSpaces := checkAvailability();
+        print "\n\n\t>>> Vehicle [" + vehicleNum + "] Left from Reserved Space";
+      }
+      else{
+        print "\n\n\t>>> VEHICLE [" + vehicleNum + "] DOES NOT EXIST !";
+      }
+    }
   }
 
   //to report on the number of non-reserved free spaces currently available.
+  /////////////////////////////////////////////////////////////////////////////
   /*
     Pre-Conditions
     --------------
@@ -131,39 +173,55 @@ class CarPark{
   method checkAvailability() returns (count: int)
     requires Valid();
     ensures Valid();
-    ensures count >= 0
+    ensures count >= 0;
   {
     var normalCount := countFreeSpaces(carsInNormalSpaces);
     var reservedCount := countFreeSpaces(carsInReservedSpaces);
 
     if(isWeekend){
-      count := normalCount + reservedCount;
+      count := (normalCount + reservedCount);
     }
     else{
       count := normalCount;
-    } 
+    }
   }
 
   // to allow a car with a subscription to enter the car park's reservered area on a weekday,
   // or to enter the carpark generally on a weekend day.
-  method enterReservedCarPark()
+  ////////////////////////////////////////////////////////////////////////////////////////////
+  /*
+    Pre-conditions
+    --------------
+    1. Valid()
+
+    Post-Conditions
+    ---------------
+    1. Valid()
+  */
+  method enterReservedCarPark(vehicleNum: string)
     requires Valid();
     ensures Valid();
   {
 
   }
 
-  predicate IsSubscriptionsAvailable()
-    reads this;
-  {
-    subscriptionCount < subscriptions.Length
-  }
 
   // to allow a car to be registered as a having a reserved space when the owner pays the subscription,
   // AS LONG AS SUBSCRIPTIONS ARE AVAIALBLE
+  ///////////////////////////////////////////////////////////////////////////////////////////////////////
+  /*
+    Pre-conditions
+    --------------
+    1. Valid();
+    2. subscriptionCount < subscriptions.Length
+
+    Post-Conditions
+    ---------------
+    1. Valid();
+  */
   method makeSubscription(vehicleNum: string)
     requires Valid();
-    requires IsSubscriptionsAvailable();
+    requires subscriptionCount < subscriptions.Length;
     ensures Valid();
     modifies this`subscriptionCount, this.subscriptions;
   {
@@ -172,6 +230,16 @@ class CarPark{
   }
 
   //Method for checking whther a car has a subscrition
+  ///////////////////////////////////////////////////////
+  /*
+    Pre-conditions
+    --------------
+    1. Valid()
+
+    Post-conditions
+    ---------------
+    1. Valid()
+  */
   method hasSubscription(vehicleNum: string) returns (result: bool)
     requires Valid();
     ensures Valid();
@@ -189,6 +257,7 @@ class CarPark{
 
   // to remove parking restrictions on the reserved spaces
   // AT THE WEEKEND
+  ///////////////////////////////////////////////////////////
   /*
     Pre-condition
     -------------
@@ -208,6 +277,16 @@ class CarPark{
   }
 
   //to remove and crush remaining cars at closing time.
+  ///////////////////////////////////////////////////////
+  /*
+    Pre-conditions
+    --------------
+    1. Valid()
+
+    Post-conditions
+    ---------------
+    1. Valid()
+  */
   method closeCarPark()
     requires Valid();
     ensures Valid();
@@ -217,14 +296,22 @@ class CarPark{
 
   //Method for printing the Car Park given the Columns 
   ////////////////////////////////////////////////////
+  /*
+    Pre-conditions
+    --------------
+    1. Valid()
+
+    Post-conditions
+    ---------------
+    1. Valid()
+  */
   method printParkingPlan()
     requires Valid();
     ensures Valid();
   {
     var columns: int := 4;
-    var availableSlots: int := checkAvailability();
     print "\n\n\tAvailable Slots :: ";
-    print availableSlots;
+    print totalAvailableSpaces;
     print "\n\n";
     print "\t[NORMAL AREA]\n\n";
     printArray(carsInNormalSpaces, columns);
@@ -234,6 +321,18 @@ class CarPark{
     print "\n\n";
   }
 
+  //Helper method for priting parking patterns with arrays
+  /////////////////////////////////////////////////////////
+  /*
+    Pre-conditions
+    --------------
+    1. Valid()
+    2. Columns must be > 1
+
+    Post-conditions
+    ---------------
+    1. Valid()
+  */
   method printArray(arr: array<string>, columns: int)
     requires Valid();
     requires columns > 1;
@@ -252,6 +351,60 @@ class CarPark{
     print "\n\n";
   }
 
+  //Method for Getting the vehicle slot from normal or reserved spaces
+  //////////////////////////////////////////////////////////////////////
+  /*
+    Pre-conditions
+    --------------
+    1. Valid()
+
+    Post-conditions
+    ---------------
+    1. Valid()
+    2. slot >= -1 && slot < arr.Length
+  */
+  method getVehicleFrom(arr: array<string>, vehicleNum: string) returns (slot: int)
+    requires Valid();
+    ensures Valid();
+    ensures slot >= -1 && slot < arr.Length;
+  {
+    slot := -1;
+    for i := 0 to arr.Length{
+      if(arr[i] == vehicleNum){
+        slot := i;
+        break;
+      }
+    }
+  }
+
+  //Method for returning the index of the first Freeslot
+  /////////////////////////////////////////////////////////
+  /*
+    Pre-conditions
+    --------------
+    1. Valid()
+
+    Post-conditions
+    ---------------
+    1. Valid()
+    2. slot >= -1 && slot < arr.Length
+  */
+  method getFreeSlot(arr: array<string>) returns (slot: int)
+    requires Valid();
+    ensures Valid();
+    ensures slot >= -1 && slot < arr.Length;
+  {
+    slot := -1;
+    for i := 0 to arr.Length{
+      if(arr[i] == "-"){
+        slot := i;
+        break;
+      }
+    }
+  }
+
+  //Method for counting Free slots given the parking array
+  //////////////////////////////////////////////////////////
   /*
     Pre-conditions
     --------------
@@ -278,6 +431,8 @@ class CarPark{
     return count;
   }
 
+  //Method for clearing Normal spaces
+  /////////////////////////////////////
   /*
     Pre-Conditions
     --------------
@@ -302,6 +457,8 @@ class CarPark{
     }
   }
 
+  //Method for clearing Reserved Spaces
+  ///////////////////////////////////////
   /*
     Pre-Conditions
     --------------
@@ -326,5 +483,3 @@ class CarPark{
     }
   }
 }
-
-
