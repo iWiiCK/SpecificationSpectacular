@@ -8,7 +8,8 @@ class MainDriver {
 
     var carPark := new CarPark(20, 10, 5, false);
     carPark.printParkingPlan();
-    // carPark.enterCarPark(2, "abs");
+    carPark.enterCarPark(1, "abs");
+    carPark.printParkingPlan();
   }
 }
 
@@ -68,27 +69,44 @@ class CarPark{
     clearReservedSpaces();
   }
 
+  //State invarients of the class
+  /////////////////////////////////
+  predicate Valid()
+    reads this;
+  {
+    carsInReservedSpaces.Length > 0 &&
+    carsInNormalSpaces.Length > 0 && 
+    normalSpaces > reservedSpaces &&
+    normalSpaces > 0 && 
+    reservedSpaces > 0 &&
+    normalCarCount <= normalSpaces && normalCarCount >= 0 &&
+    reservedCarCount <= reservedSpaces && reservedCarCount >= 0 &&
+    subscriptionCount <= subscriptions.Length && subscriptionCount >= 0 
+  }
+
   predicate CanEnterCarPark()
     requires Valid();
     ensures Valid();
     reads this;
   {
-    (isWeekend && ((normalSpaces + reservedSpaces) - parkingMargin) > (normalCarCount + reservedCarCount)) ||
-    (!isWeekend && (normalSpaces - parkingMargin) > normalCarCount)
+    if(isWeekend)
+    then (((normalSpaces + reservedSpaces) - parkingMargin) > (normalCarCount + reservedCarCount))
+    else ((normalSpaces - parkingMargin) > normalCarCount)
   }
 
   //To allow any car without registration to enter the car park.
   method enterCarPark(slot: int, vehicleNum: string)
     requires Valid();
     requires CanEnterCarPark();
+    requires normalCarCount < normalSpaces;
     requires slot >= 0 && slot < carsInNormalSpaces.Length;
     requires carsInNormalSpaces[slot] == "-";
-    //TODO: Fix this Valid
-    // ensures Valid();
+    ensures Valid();
+    ensures carsInNormalSpaces[slot] == vehicleNum;
     modifies this.carsInNormalSpaces, this`normalCarCount;
   {
     carsInNormalSpaces[slot] := vehicleNum;
-    // normalCarCount := normalCarCount + 1;
+    normalCarCount := normalCarCount + 1;
   }
 
   // to allow any car from any area to leave the car park.
@@ -195,22 +213,6 @@ class CarPark{
     ensures Valid();
   {
 
-  }
-
-  
-  //State invarients of the class
-  /////////////////////////////////
-  predicate Valid()
-    reads this;
-  {
-    carsInReservedSpaces.Length > 0 &&
-    carsInNormalSpaces.Length > 0 && 
-    normalSpaces > reservedSpaces &&
-    normalSpaces > 0 && 
-    reservedSpaces > 0 &&
-    normalCarCount <= normalSpaces && normalCarCount >= 0 &&
-    reservedCarCount <= reservedSpaces && reservedCarCount >= 0 &&
-    subscriptionCount <= subscriptions.Length && subscriptionCount >= 0 
   }
 
   //Method for printing the Car Park given the Columns 
