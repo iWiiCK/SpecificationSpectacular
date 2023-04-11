@@ -98,6 +98,7 @@ class CarPark{
     Pre-Conditions
     --------------
     1. Valid()
+    2. Vehicle must not be already in the car park(in Any space reserved or not)
 
     Post-Conditions
     ---------------
@@ -105,6 +106,8 @@ class CarPark{
   */
   method enterCarPark(vehicleNum: string)
     requires Valid();
+    // requires forall i :: 0 <= i < carsInNormalSpaces.Length && carsInNormalSpaces[i] != vehicleNum;
+    // requires forall i :: 0 <= i < carsInReservedSpaces.Length && carsInReservedSpaces[i] != vehicleNum;
     ensures Valid();
     modifies this.carsInNormalSpaces, this`normalCarCount, this`totalAvailableSpaces;
   {
@@ -134,8 +137,8 @@ class CarPark{
   */
   method leaveCarPark(vehicleNum: string)
     requires Valid();
-    // requires (exists i :: 0 <= i < carsInNormalSpaces.Length ==> carsInNormalSpaces[i] == vehicleNum) || 
-    //   (exists i :: 0 <= i < carsInReservedSpaces.Length ==> carsInReservedSpaces[i] == vehicleNum);
+    // requires ((exists i :: 0 <= i < carsInNormalSpaces.Length && carsInNormalSpaces[i] == vehicleNum) || 
+    //   (exists i :: 0 <= i < carsInReservedSpaces.Length && carsInReservedSpaces[i] == vehicleNum));
     ensures Valid();
     modifies this.carsInNormalSpaces, this`normalCarCount, this`totalAvailableSpaces, this.carsInReservedSpaces;
   {
