@@ -8,11 +8,23 @@ class MainDriver {
   static method Main() {
 
     var carPark := new CarPark(20, 10, 5, false);
+    //Entering the normal parking space
     carPark.enterCarPark("abc");
     carPark.enterCarPark("cdf");
     carPark.enterCarPark("fgh");
     carPark.enterCarPark("hij");
     carPark.leaveCarPark("fgh");
+    carPark.printParkingPlan();
+
+    // Making subscriptions
+    // carPark.makeSubscription("fgh");
+
+    //Entering Reserved Spaces
+    carPark.enterReservedCarPark("fgh");
+    carPark.printParkingPlan();
+
+    // Closing the Car Park
+    carPark.closeCarPark();
     carPark.printParkingPlan();
   }
 }
@@ -112,10 +124,9 @@ class CarPark{
     modifies this.carsInNormalSpaces, this`normalCarCount, this`totalAvailableSpaces;
   {
     var slot := getFreeSlot(carsInNormalSpaces);
-    var currentAvailability := checkAvailability();
-    if(slot > -1 && currentAvailability > parkingMargin){
+    if(slot > -1 && totalAvailableSpaces > parkingMargin){
       carsInNormalSpaces[slot] := vehicleNum;
-      totalAvailableSpaces := currentAvailability;
+      totalAvailableSpaces := checkAvailability();
     }
     else{
       print "\n\n\t>>> CAR PARK FULL ! :: Vehicle[" + vehicleNum + "] wasn't allowed to Enter\n\n";
@@ -196,6 +207,8 @@ class CarPark{
     Pre-conditions
     --------------
     1. Valid()
+    2. Vehicle Should not be in the normal space or the reserved space
+    3. vehicle should have a subscription.
 
     Post-Conditions
     ---------------
@@ -203,9 +216,36 @@ class CarPark{
   */
   method enterReservedCarPark(vehicleNum: string)
     requires Valid();
+    // requires forall i :: 0 <= i < carsInNormalSpaces.Length && carsInNormalSpaces[i] != vehicleNum;
+    // requires forall i :: 0 <= i < carsInReservedSpaces.Length && carsInReservedSpaces[i] != vehicleNum;
+    // requires exists i :: 0 <= i < subscriptions.Length && subscriptions[i] == vehicleNum;
     ensures Valid();
+    modifies this.carsInReservedSpaces, this`totalAvailableSpaces;
   {
+    var slot: int;
+    slot := getVehicleFrom(carsInReservedSpaces, vehicleNum);
 
+    if(slot == -1){
+      slot := getFreeSlot(carsInNormalSpaces);
+      var hasSubscription := hasSubscription(vehicleNum);
+      if(hasSubscription){
+        if(slot > -1 && slot < carsInReservedSpaces.Length){
+          carsInReservedSpaces[slot] := vehicleNum;
+          totalAvailableSpaces := checkAvailability();
+          print "\n\n\t>>> Vehicle [" + vehicleNum + "] Parked in Reserved Space";
+        }
+        else{
+          print "\n\n\t>>> RESERVED AREA FULL !";
+        }
+      }
+      else{
+        print "\n\n\t>>> VEHICLE [" + vehicleNum + "] HAS NO SUBSCRIPTIONS !";
+      }
+        
+    }
+    else{
+      print "\n\n\t>>> VEHICLE [" + vehicleNum + "] Already in !";
+    }
   }
 
 
@@ -217,6 +257,7 @@ class CarPark{
     --------------
     1. Valid();
     2. subscriptionCount < subscriptions.Length
+    3. vehicleNum should not be in the array
 
     Post-Conditions
     ---------------
@@ -224,8 +265,10 @@ class CarPark{
   */
   method makeSubscription(vehicleNum: string)
     requires Valid();
-    requires subscriptionCount < subscriptions.Length;
+    requires subscriptionCount >= 0 && subscriptionCount < subscriptions.Length;
+    // requires forall i :: 0 <= i < subscriptions.Length && subscriptions[i] != vehicleNum;
     ensures Valid();
+    ensures subscriptionCount <= subscriptions.Length;
     modifies this`subscriptionCount, this.subscriptions;
   {
     subscriptions[subscriptionCount] := vehicleNum;
@@ -293,8 +336,13 @@ class CarPark{
   method closeCarPark()
     requires Valid();
     ensures Valid();
+    modifies this.carsInNormalSpaces, this.carsInReservedSpaces, this`totalAvailableSpaces;
   {
+    print "\n\n\tCLOSING CAR PARK (CRUSHING REMAINING CARS)\n\n";
 
+    clearNormalSpaces();
+    clearReservedSpaces();
+    totalAvailableSpaces := checkAvailability();
   }
 
   //Method for printing the Car Park given the Columns 
