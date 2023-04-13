@@ -158,12 +158,16 @@ class CarPark{
     Post-Conditions
     ---------------
     1. Valid()
+    2. Vehicle should not be in the normal spaces
+    3. vehicle should not be there in the reserved spaces.
   */
   method leaveCarPark(vehicleNum: string)
     requires Valid();
     // requires ((exists i :: 0 <= i < carsInNormalSpaces.Length && carsInNormalSpaces[i] == vehicleNum) || 
     //   (exists i :: 0 <= i < carsInReservedSpaces.Length && carsInReservedSpaces[i] == vehicleNum));
     ensures Valid();
+    // ensures forall i :: 0 <= i < carsInNormalSpaces.Length && carsInNormalSpaces[i] != vehicleNum;
+    // ensures forall i :: 0 <= i < carsInReservedSpaces.Length && carsInReservedSpaces[i] != vehicleNum;
     modifies this.carsInNormalSpaces, this`normalCarCount, this`totalAvailableSpaces, this.carsInReservedSpaces;
   {
     var slot := getVehicleFrom(carsInNormalSpaces, vehicleNum);
