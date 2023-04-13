@@ -13,7 +13,7 @@ class MainDriver {
     carPark.enterCarPark("cdf");
     carPark.enterCarPark("fgh");
     carPark.enterCarPark("hij");
-    carPark.leaveCarPark("fgh");
+    // carPark.leaveCarPark("fgh");
     carPark.printParkingPlan();
 
     // Making subscriptions
@@ -104,13 +104,24 @@ class CarPark{
     subscriptionCount <= subscriptions.Length && subscriptionCount >= 0 
   }
 
+  //Method to check whether a vehicle can enter the car park or not
+  //This considers how the park should be considered as full when 5 slots remain.
+  ///////////////////////////////////////////////////////////////////////////////////
+  predicate HasSpaceToEnterVehicle()
+    reads this;
+  {
+    totalAvailableSpaces > parkingMargin
+  }
+
   //To allow any car without registration to enter the car park.
   /////////////////////////////////////////////////////////////////
   /*
     Pre-Conditions
     --------------
     1. Valid()
-    2. Vehicle must not be already in the car park(in Any space reserved or not)
+    2. Vehicle must not be in the free parking space
+    3. Vehicle must not be in the Reserved parking space
+    4. There must be space in the carp park to enter in the first place.
 
     Post-Conditions
     ---------------
@@ -118,6 +129,7 @@ class CarPark{
   */
   method enterCarPark(vehicleNum: string)
     requires Valid();
+    // requires HasSpaceToEnterVehicle();
     // requires forall i :: 0 <= i < carsInNormalSpaces.Length && carsInNormalSpaces[i] != vehicleNum;
     // requires forall i :: 0 <= i < carsInReservedSpaces.Length && carsInReservedSpaces[i] != vehicleNum;
     ensures Valid();
@@ -207,8 +219,9 @@ class CarPark{
     Pre-conditions
     --------------
     1. Valid()
-    2. Vehicle Should not be in the normal space or the reserved space
+    2. Vehicle Should Not be in the normal space
     3. vehicle should have a subscription.
+    4. Vehicle should not be in the Reserved area already.
 
     Post-Conditions
     ---------------
@@ -268,7 +281,7 @@ class CarPark{
     requires subscriptionCount >= 0 && subscriptionCount < subscriptions.Length;
     // requires forall i :: 0 <= i < subscriptions.Length && subscriptions[i] != vehicleNum;
     ensures Valid();
-    ensures subscriptionCount <= subscriptions.Length;
+    ensures subscriptionCount == old(subscriptionCount) + 1;
     modifies this`subscriptionCount, this.subscriptions;
   {
     subscriptions[subscriptionCount] := vehicleNum;
