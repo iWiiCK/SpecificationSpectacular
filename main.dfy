@@ -59,7 +59,6 @@ class CarPark{
     -------------
     1. Valid()
     2. carsInNormalSpaces && carsInReservedSpaces must be fresh arrays.
-
   */
   constructor(normalSpaces: int, reservedSpaces: int, parkingMargin: int, isWeekend: bool)
     requires normalSpaces > parkingMargin && reservedSpaces > parkingMargin
@@ -126,6 +125,7 @@ class CarPark{
     Post-Conditions
     ---------------
     1. Valid()
+    2. The vehicle should exist in one of the spaces
   */
   method enterCarPark(vehicleNum: string)
     requires Valid();
@@ -133,6 +133,7 @@ class CarPark{
     // requires forall i :: 0 <= i < carsInNormalSpaces.Length && carsInNormalSpaces[i] != vehicleNum;
     // requires forall i :: 0 <= i < carsInReservedSpaces.Length && carsInReservedSpaces[i] != vehicleNum;
     ensures Valid();
+    // ensures exists i :: 0 <= i < carsInNormalSpaces.Length && carsInNormalSpaces[i] == vehicleNum;
     modifies this.carsInNormalSpaces, this`normalCarCount, this`totalAvailableSpaces;
   {
     var slot := getFreeSlot(carsInNormalSpaces);
@@ -226,6 +227,7 @@ class CarPark{
     Post-Conditions
     ---------------
     1. Valid()
+    2. Ensures the vehicle is now in the reserved area.
   */
   method enterReservedCarPark(vehicleNum: string)
     requires Valid();
@@ -233,6 +235,7 @@ class CarPark{
     // requires forall i :: 0 <= i < carsInReservedSpaces.Length && carsInReservedSpaces[i] != vehicleNum;
     // requires exists i :: 0 <= i < subscriptions.Length && subscriptions[i] == vehicleNum;
     ensures Valid();
+    // ensures exists i :: 0 <= i < carsInReservedSpaces.Length && carsInReservedSpaces[i] == vehicleNum;
     modifies this.carsInReservedSpaces, this`totalAvailableSpaces;
   {
     var slot: int;
@@ -275,13 +278,15 @@ class CarPark{
     Post-Conditions
     ---------------
     1. Valid();
+    2. Subscription should now be in the array.
   */
   method makeSubscription(vehicleNum: string)
     requires Valid();
     requires subscriptionCount >= 0 && subscriptionCount < subscriptions.Length;
-    // requires forall i :: 0 <= i < subscriptions.Length && subscriptions[i] != vehicleNum;
+    requires forall i :: 0 <= i < subscriptions.Length && subscriptions[i] != vehicleNum;
     ensures Valid();
     ensures subscriptionCount == old(subscriptionCount) + 1;
+    ensures exists i :: 0 <= i < subscriptions.Length && subscriptions[i] == vehicleNum;
     modifies this`subscriptionCount, this.subscriptions;
   {
     subscriptions[subscriptionCount] := vehicleNum;
@@ -330,9 +335,10 @@ class CarPark{
   method openReservedArea(isOpen: bool)
     requires Valid();
     ensures Valid() && isWeekend == isOpen;
-    modifies this`isWeekend;
+    modifies this`isWeekend, this`totalAvailableSpaces;
   {
     isWeekend := isOpen;
+    totalAvailableSpaces := checkAvailability();
   }
 
   //to remove and crush remaining cars at closing time.
