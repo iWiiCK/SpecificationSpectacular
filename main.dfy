@@ -13,7 +13,7 @@ class MainDriver {
     carPark.enterCarPark(1, "cdf");
     carPark.enterCarPark(2, "fgh");
     carPark.enterCarPark(19, "hij");
-    carPark.leaveCarPark("fgh");
+    carPark.leaveFromNormalArea("fgh");
     carPark.printParkingPlan();
 
     // Making subscriptions
@@ -160,46 +160,32 @@ class CarPark{
   }
 
 
-  // to allow any car from any area to leave the car park.
-  ///////////////////////////////////////////////////////////
-  /*
-    Pre-Conditions
-    --------------
-    1. Valid()
-    2. Vehicle MUST be in the Normal area or the reserved Area
-
-    Post-Conditions
-    ---------------
-    1. Valid()
-    2. Vehicle should not be in the normal spaces
-    3. vehicle should not be there in the reserved spaces.
-  */
-  method leaveCarPark(vehicleNum: string)
+  method leaveFromNormalArea(vehicleNum: string)
     requires Valid();
-    // requires ((exists i :: 0 <= i < normalSlots.Length && normalSlots[i] == vehicleNum) || 
-    //   (exists i :: 0 <= i < reservedSlots.Length && reservedSlots[i] == vehicleNum));
+    requires normalCarCount > 0;
+    requires exists i :: 0 <= i < normalSlots.Length && normalSlots[i] == vehicleNum;
     ensures Valid();
-    // ensures forall i :: 0 <= i < normalSlots.Length && normalSlots[i] != vehicleNum;
-    // ensures forall i :: 0 <= i < reservedSlots.Length && reservedSlots[i] != vehicleNum;
-    modifies this.normalSlots, this`normalCarCount, this`totalAvailableSpaces, this.reservedSlots;
+    ensures normalCarCount == old(normalCarCount) -1;
+    modifies this.normalSlots, this`normalCarCount, this`totalAvailableSpaces;
   {
     var slot := getVehicleFrom(normalSlots, vehicleNum);
-    if(slot > -1){
-      normalSlots[slot] := "-";
-      totalAvailableSpaces := checkAvailability();
-      print "\n\n\t>>> Vehicle [" + vehicleNum + "] Left from Normal Space";
-    }
-    else{
-      slot := getVehicleFrom(reservedSlots, vehicleNum);
-      if(slot > -1){
-        reservedSlots[slot] := "-";
-        totalAvailableSpaces := checkAvailability();
-        print "\n\n\t>>> Vehicle [" + vehicleNum + "] Left from Reserved Space";
-      }
-      else{
-        print "\n\n\t>>> VEHICLE [" + vehicleNum + "] DOES NOT EXIST !";
-      }
-    }
+    normalSlots[slot] := "-";
+    normalCarCount := normalCarCount -1;
+    totalAvailableSpaces := checkAvailability();
+  }
+
+  method leaveFromReservedArea(vehicleNum: string)
+    requires Valid();
+    requires reservedCarCount > 0;
+    requires exists i :: 0 <= i < reservedSlots.Length && reservedSlots[i] == vehicleNum;
+    ensures Valid();
+    ensures reservedCarCount == old(reservedCarCount) -1;
+    modifies this.reservedSlots, this`reservedCarCount, this`totalAvailableSpaces;
+  {
+    var slot := getVehicleFrom(reservedSlots, vehicleNum);
+    reservedSlots[slot] := "-";
+    reservedCarCount := reservedCarCount -1;
+    totalAvailableSpaces := checkAvailability();
   }
 
   //to report on the number of non-reserved free spaces currently available.
@@ -246,40 +232,40 @@ class CarPark{
     1. Valid()
     2. Ensures the vehicle is now in the reserved area.
   */
-  method enterReservedCarPark(vehicleNum: string)
-    requires Valid();
-    // requires forall i :: 0 <= i < normalSlots.Length && normalSlots[i] != vehicleNum;
-    // requires forall i :: 0 <= i < reservedSlots.Length && reservedSlots[i] != vehicleNum;
-    // requires exists i :: 0 <= i < subscriptions.Length && subscriptions[i] == vehicleNum;
-    ensures Valid();
-    // ensures exists i :: 0 <= i < reservedSlots.Length && reservedSlots[i] == vehicleNum;
-    modifies this.reservedSlots, this`totalAvailableSpaces;
-  {
-    var slot: int;
-    slot := getVehicleFrom(reservedSlots, vehicleNum);
+  // method enterReservedCarPark(vehicleNum: string)
+  //   requires Valid();
+  //   // requires forall i :: 0 <= i < normalSlots.Length && normalSlots[i] != vehicleNum;
+  //   // requires forall i :: 0 <= i < reservedSlots.Length && reservedSlots[i] != vehicleNum;
+  //   // requires exists i :: 0 <= i < subscriptions.Length && subscriptions[i] == vehicleNum;
+  //   ensures Valid();
+  //   // ensures exists i :: 0 <= i < reservedSlots.Length && reservedSlots[i] == vehicleNum;
+  //   modifies this.reservedSlots, this`totalAvailableSpaces;
+  // {
+  //   var slot: int;
+  //   slot := getVehicleFrom(reservedSlots, vehicleNum);
 
-    if(slot == -1){
-      slot := getFreeSlot(normalSlots);
-      var hasSubscription := hasSubscription(vehicleNum);
-      if(hasSubscription){
-        if(slot > -1 && slot < reservedSlots.Length){
-          reservedSlots[slot] := vehicleNum;
-          totalAvailableSpaces := checkAvailability();
-          print "\n\n\t>>> Vehicle [" + vehicleNum + "] Parked in Reserved Space";
-        }
-        else{
-          print "\n\n\t>>> RESERVED AREA FULL !";
-        }
-      }
-      else{
-        print "\n\n\t>>> VEHICLE [" + vehicleNum + "] HAS NO SUBSCRIPTIONS !";
-      }
+  //   if(slot == -1){
+  //     slot := getFreeSlot(normalSlots);
+  //     var hasSubscription := hasSubscription(vehicleNum);
+  //     if(hasSubscription){
+  //       if(slot > -1 && slot < reservedSlots.Length){
+  //         reservedSlots[slot] := vehicleNum;
+  //         totalAvailableSpaces := checkAvailability();
+  //         print "\n\n\t>>> Vehicle [" + vehicleNum + "] Parked in Reserved Space";
+  //       }
+  //       else{
+  //         print "\n\n\t>>> RESERVED AREA FULL !";
+  //       }
+  //     }
+  //     else{
+  //       print "\n\n\t>>> VEHICLE [" + vehicleNum + "] HAS NO SUBSCRIPTIONS !";
+  //     }
         
-    }
-    else{
-      print "\n\n\t>>> VEHICLE [" + vehicleNum + "] Already in !";
-    }
-  }
+  //   }
+  //   else{
+  //     print "\n\n\t>>> VEHICLE [" + vehicleNum + "] Already in !";
+  //   }
+  // }
 
 
   // to allow a car to be registered as a having a reserved space when the owner pays the subscription,
@@ -452,11 +438,14 @@ class CarPark{
   */
   method getVehicleFrom(arr: array<string>, vehicleNum: string) returns (slot: int)
     requires Valid();
+    requires arr == normalSlots || arr == reservedSlots;
+    requires exists i :: 0 <= i < arr.Length && arr[i] == vehicleNum;
     ensures Valid();
-    ensures slot >= -1 && slot < arr.Length;
+    ensures slot >= 0 && slot < arr.Length;
   {
-    slot := -1;
-    for i := 0 to arr.Length{
+    slot := 0;
+    for i := 0 to arr.Length
+    {
       if(arr[i] == vehicleNum){
         slot := i;
         break;
