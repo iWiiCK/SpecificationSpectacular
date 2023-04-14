@@ -68,13 +68,17 @@ class MainDriver {
     //-----------------------
     carPark.closeCarPark();
 
-    //Opening the reserved area/ Changing to a Weekday
+    //Opening the reserved area/ Changing to a Weekday ==> Weenend
     //------------------------------------------------
     carPark.openReservedArea(true);
 
     //TEST ::  Adding a new Car after (Available slot count should now be 30 instead of 20)
     //-------------------------------------------------------------------------------------
     carPark.enterCarPark(0, "abc");
+
+    //TEST :: Entering the reserved area without a subscription on Weekends
+    //---------------------------------------------------------------------
+    carPark.enterReservedArea(0, "cdf");
     carPark.printParkingPlan();
   }
 }
@@ -223,7 +227,7 @@ class CarPark{
     requires reservedSlots[slot] == "-";
     // requires forall i :: 0 <= i < normalSlots.Length ==> normalSlots[i] != vehicleNum;
     requires forall i :: 0 <= i < reservedSlots.Length ==> reservedSlots[i] != vehicleNum;
-    requires exists i :: 0 <= i < totalReservedSlots && subscriptions[i] == vehicleNum;
+    requires !isWeekend ==> exists i :: 0 <= i < subscriptions.Length && subscriptions[i] == vehicleNum;
     ensures Valid();
     ensures reservedCarCount == old(reservedCarCount) + 1;
     ensures reservedSlots[slot] == vehicleNum;
