@@ -9,19 +9,19 @@ class MainDriver {
 
     var carPark := new CarPark(20, 10, 5, false);
     //Entering the normal parking space
-    carPark.enterCarPark("abc");
-    carPark.enterCarPark("cdf");
-    carPark.enterCarPark("fgh");
-    carPark.enterCarPark("hij");
-    // carPark.leaveCarPark("fgh");
+    carPark.enterCarPark(0, "abc");
+    carPark.enterCarPark(1, "cdf");
+    carPark.enterCarPark(2, "fgh");
+    carPark.enterCarPark(19, "hij");
+    carPark.leaveCarPark("fgh");
     carPark.printParkingPlan();
 
     // Making subscriptions
     // carPark.makeSubscription("fgh");
 
     //Entering Reserved Spaces
-    carPark.enterReservedCarPark("fgh");
-    carPark.printParkingPlan();
+    // carPark.enterReservedCarPark("fgh");
+    // carPark.printParkingPlan();
 
     // Closing the Car Park
     carPark.closeCarPark();
@@ -31,12 +31,12 @@ class MainDriver {
 
 // CarPark Class
 class CarPark{
-  const reservedSpaces: int;
-  const normalSpaces: int;
+  const totalReservedSlots: int;
+  const totalNormalSlots: int;
   const parkingMargin: int;
 
-  var carsInNormalSpaces: array<string>;
-  var carsInReservedSpaces: array<string>;
+  var normalSlots: array<string>;
+  var reservedSlots: array<string>;
   var subscriptions: array<string>;
   var isWeekend: bool;
 
@@ -52,30 +52,39 @@ class CarPark{
     ---------------
     1. Total Freespaces > reserved spaces.
     2. Total Freespaces, Reserved spaces and parkingMargin must be > 0
-    3. reservedSpaces > parkingMargin
+    3. totalReservedSlots > parkingMargin
     4. totalFreespaces - reserved spaces > parkingMargin
 
     Post Condions
     -------------
     1. Valid()
-    2. carsInNormalSpaces && carsInReservedSpaces must be fresh arrays.
+    2. normalSlots && reservedSlots must be fresh arrays.
   */
-  constructor(normalSpaces: int, reservedSpaces: int, parkingMargin: int, isWeekend: bool)
-    requires normalSpaces > parkingMargin && reservedSpaces > parkingMargin
-    requires normalSpaces > reservedSpaces;
-    requires normalSpaces > 0 && reservedSpaces > 0
+  constructor(totalNormalSlots: int, totalReservedSlots: int, parkingMargin: int, isWeekend: bool)
+    requires totalNormalSlots > parkingMargin && totalReservedSlots > parkingMargin
+    requires totalNormalSlots > totalReservedSlots;
+    requires totalNormalSlots > 0 && totalReservedSlots > 0
     ensures Valid();
-    ensures fresh(carsInNormalSpaces) && fresh(carsInReservedSpaces);
+    ensures fresh(normalSlots) && fresh(reservedSlots) && fresh(subscriptions);
+    ensures this.totalNormalSlots == totalNormalSlots;
+    ensures this.totalReservedSlots == totalReservedSlots;
+    ensures this.parkingMargin == parkingMargin;
+    ensures this.isWeekend == isWeekend;
+    ensures normalCarCount == 0;
+    ensures reservedCarCount == 0;
+    ensures subscriptionCount == 0;
+    ensures forall i :: 0 <= i < normalSlots.Length ==> normalSlots[i] == "-";
+    ensures forall i :: 0 <= i < reservedSlots.Length ==> reservedSlots[i] == "-";
   {
-    this.normalSpaces := normalSpaces;
-    this.reservedSpaces := reservedSpaces;
+    this.totalNormalSlots := totalNormalSlots;
+    this.totalReservedSlots := totalReservedSlots;
     this.isWeekend := isWeekend;
     this.parkingMargin := parkingMargin;
 
     new;
-    carsInNormalSpaces := new string[normalSpaces];
-    carsInReservedSpaces := new string[reservedSpaces];
-    subscriptions := new string[reservedSpaces];
+    normalSlots := new string[totalNormalSlots];
+    reservedSlots := new string[totalReservedSlots];
+    subscriptions := new string[totalReservedSlots];
 
     normalCarCount := 0;
     reservedCarCount := 0;
@@ -92,14 +101,17 @@ class CarPark{
   predicate Valid()
     reads this;
   {
-    carsInReservedSpaces.Length > 0 &&
-    carsInNormalSpaces.Length > 0 && 
-    normalSpaces > reservedSpaces &&
-    normalSpaces > 0 && 
-    reservedSpaces > 0 &&
-    parkingMargin < reservedSpaces &&
-    normalCarCount <= normalSpaces && normalCarCount >= 0 &&
-    reservedCarCount <= reservedSpaces && reservedCarCount >= 0 &&
+    reservedSlots.Length > 0 &&
+    normalSlots.Length > 0 && 
+    normalSlots.Length == totalNormalSlots &&
+    reservedSlots.Length == totalReservedSlots &&
+    subscriptions.Length == totalReservedSlots &&
+    totalNormalSlots > totalReservedSlots &&
+    totalNormalSlots > 0 && 
+    totalReservedSlots > 0 &&
+    parkingMargin < totalReservedSlots &&
+    normalCarCount <= totalNormalSlots && normalCarCount >= 0 &&
+    reservedCarCount <= totalReservedSlots && reservedCarCount >= 0 &&
     subscriptionCount <= subscriptions.Length && subscriptionCount >= 0 
   }
 
@@ -109,7 +121,7 @@ class CarPark{
   predicate HasSpaceToEnterVehicle()
     reads this;
   {
-    totalAvailableSpaces > parkingMargin
+    (normalCarCount + parkingMargin) < totalNormalSlots
   }
 
   //To allow any car without registration to enter the car park.
@@ -127,23 +139,24 @@ class CarPark{
     1. Valid()
     2. The vehicle should exist in one of the spaces
   */
-  method enterCarPark(vehicleNum: string)
+  method enterCarPark(slot: nat, vehicleNum: string)
     requires Valid();
-    // requires HasSpaceToEnterVehicle();
-    // requires forall i :: 0 <= i < carsInNormalSpaces.Length && carsInNormalSpaces[i] != vehicleNum;
-    // requires forall i :: 0 <= i < carsInReservedSpaces.Length && carsInReservedSpaces[i] != vehicleNum;
+    requires 0 <= slot < normalSlots.Length;
+    requires normalSlots[slot] == "-";
+    requires HasSpaceToEnterVehicle();
+    requires normalCarCount < totalNormalSlots;
+    requires forall i :: 0 <= i < normalSlots.Length ==> normalSlots[i] != vehicleNum;
+    requires forall i :: 0 <= i < reservedSlots.Length ==> reservedSlots[i] != vehicleNum;
     ensures Valid();
-    // ensures exists i :: 0 <= i < carsInNormalSpaces.Length && carsInNormalSpaces[i] == vehicleNum;
-    modifies this.carsInNormalSpaces, this`normalCarCount, this`totalAvailableSpaces;
+    ensures normalCarCount == old(normalCarCount) + 1;
+    ensures normalSlots[slot] == vehicleNum;
+    ensures forall i :: 0 <= i < slot ==> normalSlots[i] == old(normalSlots[i]);
+    ensures forall i :: slot < i < normalSlots.Length  ==> normalSlots[i] == old(normalSlots[i]);
+    modifies this.normalSlots, this`normalCarCount, this`totalAvailableSpaces;
   {
-    var slot := getFreeSlot(carsInNormalSpaces);
-    if(slot > -1 && totalAvailableSpaces > parkingMargin){
-      carsInNormalSpaces[slot] := vehicleNum;
-      totalAvailableSpaces := checkAvailability();
-    }
-    else{
-      print "\n\n\t>>> CAR PARK FULL ! :: Vehicle[" + vehicleNum + "] wasn't allowed to Enter\n\n";
-    }
+    normalSlots[slot] := vehicleNum;
+    normalCarCount := normalCarCount + 1;
+    totalAvailableSpaces := checkAvailability();
   }
 
 
@@ -163,23 +176,23 @@ class CarPark{
   */
   method leaveCarPark(vehicleNum: string)
     requires Valid();
-    // requires ((exists i :: 0 <= i < carsInNormalSpaces.Length && carsInNormalSpaces[i] == vehicleNum) || 
-    //   (exists i :: 0 <= i < carsInReservedSpaces.Length && carsInReservedSpaces[i] == vehicleNum));
+    // requires ((exists i :: 0 <= i < normalSlots.Length && normalSlots[i] == vehicleNum) || 
+    //   (exists i :: 0 <= i < reservedSlots.Length && reservedSlots[i] == vehicleNum));
     ensures Valid();
-    // ensures forall i :: 0 <= i < carsInNormalSpaces.Length && carsInNormalSpaces[i] != vehicleNum;
-    // ensures forall i :: 0 <= i < carsInReservedSpaces.Length && carsInReservedSpaces[i] != vehicleNum;
-    modifies this.carsInNormalSpaces, this`normalCarCount, this`totalAvailableSpaces, this.carsInReservedSpaces;
+    // ensures forall i :: 0 <= i < normalSlots.Length && normalSlots[i] != vehicleNum;
+    // ensures forall i :: 0 <= i < reservedSlots.Length && reservedSlots[i] != vehicleNum;
+    modifies this.normalSlots, this`normalCarCount, this`totalAvailableSpaces, this.reservedSlots;
   {
-    var slot := getVehicleFrom(carsInNormalSpaces, vehicleNum);
+    var slot := getVehicleFrom(normalSlots, vehicleNum);
     if(slot > -1){
-      carsInNormalSpaces[slot] := "-";
+      normalSlots[slot] := "-";
       totalAvailableSpaces := checkAvailability();
       print "\n\n\t>>> Vehicle [" + vehicleNum + "] Left from Normal Space";
     }
     else{
-      slot := getVehicleFrom(carsInReservedSpaces, vehicleNum);
+      slot := getVehicleFrom(reservedSlots, vehicleNum);
       if(slot > -1){
-        carsInReservedSpaces[slot] := "-";
+        reservedSlots[slot] := "-";
         totalAvailableSpaces := checkAvailability();
         print "\n\n\t>>> Vehicle [" + vehicleNum + "] Left from Reserved Space";
       }
@@ -206,8 +219,8 @@ class CarPark{
     ensures Valid();
     ensures count >= 0;
   {
-    var normalCount := countFreeSpaces(carsInNormalSpaces);
-    var reservedCount := countFreeSpaces(carsInReservedSpaces);
+    var normalCount := countFreeSpaces(normalSlots);
+    var reservedCount := countFreeSpaces(reservedSlots);
 
     if(isWeekend){
       count := (normalCount + reservedCount);
@@ -235,22 +248,22 @@ class CarPark{
   */
   method enterReservedCarPark(vehicleNum: string)
     requires Valid();
-    // requires forall i :: 0 <= i < carsInNormalSpaces.Length && carsInNormalSpaces[i] != vehicleNum;
-    // requires forall i :: 0 <= i < carsInReservedSpaces.Length && carsInReservedSpaces[i] != vehicleNum;
+    // requires forall i :: 0 <= i < normalSlots.Length && normalSlots[i] != vehicleNum;
+    // requires forall i :: 0 <= i < reservedSlots.Length && reservedSlots[i] != vehicleNum;
     // requires exists i :: 0 <= i < subscriptions.Length && subscriptions[i] == vehicleNum;
     ensures Valid();
-    // ensures exists i :: 0 <= i < carsInReservedSpaces.Length && carsInReservedSpaces[i] == vehicleNum;
-    modifies this.carsInReservedSpaces, this`totalAvailableSpaces;
+    // ensures exists i :: 0 <= i < reservedSlots.Length && reservedSlots[i] == vehicleNum;
+    modifies this.reservedSlots, this`totalAvailableSpaces;
   {
     var slot: int;
-    slot := getVehicleFrom(carsInReservedSpaces, vehicleNum);
+    slot := getVehicleFrom(reservedSlots, vehicleNum);
 
     if(slot == -1){
-      slot := getFreeSlot(carsInNormalSpaces);
+      slot := getFreeSlot(normalSlots);
       var hasSubscription := hasSubscription(vehicleNum);
       if(hasSubscription){
-        if(slot > -1 && slot < carsInReservedSpaces.Length){
-          carsInReservedSpaces[slot] := vehicleNum;
+        if(slot > -1 && slot < reservedSlots.Length){
+          reservedSlots[slot] := vehicleNum;
           totalAvailableSpaces := checkAvailability();
           print "\n\n\t>>> Vehicle [" + vehicleNum + "] Parked in Reserved Space";
         }
@@ -287,7 +300,7 @@ class CarPark{
   method makeSubscription(vehicleNum: string)
     requires Valid();
     requires subscriptionCount >= 0 && subscriptionCount < subscriptions.Length;
-    requires forall i :: 0 <= i < subscriptions.Length && subscriptions[i] != vehicleNum;
+    requires forall i :: 0 <= i < subscriptions.Length ==> subscriptions[i] != vehicleNum;
     ensures Valid();
     ensures subscriptionCount == old(subscriptionCount) + 1;
     ensures exists i :: 0 <= i < subscriptions.Length && subscriptions[i] == vehicleNum;
@@ -359,7 +372,7 @@ class CarPark{
   method closeCarPark()
     requires Valid();
     ensures Valid();
-    modifies this.carsInNormalSpaces, this.carsInReservedSpaces, this`totalAvailableSpaces;
+    modifies this.normalSlots, this.reservedSlots, this`totalAvailableSpaces;
   {
     print "\n\n\tCLOSING CAR PARK (CRUSHING REMAINING CARS)\n\n";
 
@@ -388,10 +401,10 @@ class CarPark{
     print totalAvailableSpaces;
     print "\n\n";
     print "\t[NORMAL AREA]\n\n";
-    printArray(carsInNormalSpaces, columns);
+    printArray(normalSlots, columns);
     
     print "\n\t[RESERVED AREA]\n\n";
-    printArray(carsInReservedSpaces, columns);
+    printArray(reservedSlots, columns);
     print "\n\n";
   }
 
@@ -520,14 +533,14 @@ class CarPark{
   method clearNormalSpaces()
     requires Valid();
     ensures Valid();
-    ensures forall i :: 0 <= i < carsInNormalSpaces.Length ==> carsInNormalSpaces[i] == "-";
-    modifies carsInNormalSpaces
+    ensures forall i :: 0 <= i < normalSlots.Length ==> normalSlots[i] == "-";
+    modifies normalSlots
   {
-    for i := 0 to carsInNormalSpaces.Length
-      invariant i <= carsInNormalSpaces.Length;
-      invariant forall j :: 0 <= j < i ==> carsInNormalSpaces[j] == "-";
+    for i := 0 to normalSlots.Length
+      invariant i <= normalSlots.Length;
+      invariant forall j :: 0 <= j < i ==> normalSlots[j] == "-";
     {
-      carsInNormalSpaces[i] := "-";
+      normalSlots[i] := "-";
     }
   }
 
@@ -546,14 +559,14 @@ class CarPark{
   method clearReservedSpaces()
     requires Valid();
     ensures Valid();
-    ensures forall i :: 0 <= i < carsInReservedSpaces.Length ==> carsInReservedSpaces[i] == "-";
-    modifies carsInReservedSpaces
+    ensures forall i :: 0 <= i < reservedSlots.Length ==> reservedSlots[i] == "-";
+    modifies reservedSlots
   {
-    for i := 0 to carsInReservedSpaces.Length
-      invariant i <= carsInReservedSpaces.Length;
-      invariant forall j :: 0 <= j < i ==> carsInReservedSpaces[j] == "-";
+    for i := 0 to reservedSlots.Length
+      invariant i <= reservedSlots.Length;
+      invariant forall j :: 0 <= j < i ==> reservedSlots[j] == "-";
     {
-      carsInReservedSpaces[i] := "-";
+      reservedSlots[i] := "-";
     }
   }
 }
