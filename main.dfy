@@ -212,7 +212,7 @@ class CarPark{
     2. reservedSlots[slot] must be an empty one.
     3. Vehicle should not be in the Reserved area already.
     4. Vehicle should not be in the normal space either.
-    5. The Vehicle should have a subscription
+    5. The Vehicle should have a subscription (on Weekdays)
 
     Post-Conditions
     ---------------
