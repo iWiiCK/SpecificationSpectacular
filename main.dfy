@@ -8,7 +8,9 @@ class MainDriver {
   static method Main() {
 
     var carPark := new CarPark(20, 10, 5, false);
+
     //Entering the normal parking space
+    //-----------------------------------
     carPark.enterCarPark(0, "abc");
     carPark.enterCarPark(3, "cdf");
     carPark.enterCarPark(2, "fgh");
@@ -17,16 +19,21 @@ class MainDriver {
     carPark.printParkingPlan();
 
     // Making subscriptions
+    //------------------------
     carPark.makeSubscription("fgh");
     carPark.makeSubscription("lmn");
+    carPark.makeSubscription("qrs");
+    carPark.makeSubscription("tuv");
 
     //Entering Reserved Spaces
-    // carPark.enterReservedArea(1, "fgh");
+    //------------------------------
+    // carPark.enterReservedArea(0, "fgh");
     // carPark.printParkingPlan();
 
     // Closing the Car Park
-    carPark.closeCarPark();
-    carPark.printParkingPlan();
+    //-----------------------
+    // carPark.closeCarPark();
+    // carPark.printParkingPlan();
   }
 }
 
@@ -76,6 +83,7 @@ class CarPark{
     ensures subscriptionCount == 0;
     ensures forall i :: 0 <= i < normalSlots.Length ==> normalSlots[i] == "-";
     ensures forall i :: 0 <= i < reservedSlots.Length ==> reservedSlots[i] == "-";
+    ensures forall i :: 0 <= i < subscriptions.Length ==> subscriptions[i] == "*";
   {
     this.totalNormalSlots := totalNormalSlots;
     this.totalReservedSlots := totalReservedSlots;
@@ -85,7 +93,7 @@ class CarPark{
     new;
     normalSlots := new string[totalNormalSlots];
     reservedSlots := new string[totalReservedSlots];
-    subscriptions := new string[totalReservedSlots];
+    subscriptions := new string[totalReservedSlots](_ => "*");
 
     normalCarCount := 0;
     reservedCarCount := 0;
@@ -164,11 +172,11 @@ class CarPark{
   method enterReservedArea(slot: nat, vehicleNum: string)
     requires Valid();
     requires 0 <= slot < reservedSlots.Length;
-    requires reservedSlots[slot] == "-";
     requires reservedCarCount < totalReservedSlots;
+    requires reservedSlots[slot] == "-";
     requires forall i :: 0 <= i < normalSlots.Length ==> normalSlots[i] != vehicleNum;
     requires forall i :: 0 <= i < reservedSlots.Length ==> reservedSlots[i] != vehicleNum;
-    requires exists i :: 0 <= i < subscriptions.Length && subscriptions[i] == vehicleNum;
+    requires exists i :: 0 <= i < totalReservedSlots && subscriptions[i] == vehicleNum;
     ensures Valid();
     ensures reservedCarCount == old(reservedCarCount) + 1;
     ensures reservedSlots[slot] == vehicleNum;
@@ -254,15 +262,33 @@ class CarPark{
     1. Valid();
     2. Subscription should now be in the array.
   */
+  // method makeSubscription(vehicleNum: string)
+  //   requires Valid();
+  //   requires subscriptionCount >= 0 && subscriptionCount < subscriptions.Length;
+  //   // requires forall i :: 0 <= i < subscriptions.Length && subscriptions[i] != vehicleNum;
+  //   ensures Valid();
+  //   ensures subscriptions[old(subscriptionCount)] == vehicleNum;
+  //   ensures subscriptionCount == old(subscriptionCount) + 1;
+  //   ensures exists i :: 0 <= i < subscriptions.Length && subscriptions[i] == vehicleNum;
+  //   ensures subscriptionCount <= totalReservedSlots;
+  //   modifies this`subscriptionCount, this.subscriptions;
+  // {
+  //   subscriptions[subscriptionCount] := vehicleNum;
+  //   subscriptionCount := subscriptionCount + 1;
+  // }
+
   method makeSubscription(vehicleNum: string)
     requires Valid();
-    requires subscriptionCount >= 0 && subscriptionCount < subscriptions.Length;
-    // requires forall i :: 0 <= i < subscriptions.Length && subscriptions[i] != vehicleNum;
+    requires 0 <= subscriptionCount < subscriptions.Length;
+    requires subscriptionCount < totalReservedSlots;
+    requires subscriptions[subscriptionCount] == "*";
+    requires forall i :: 0 <= i < subscriptions.Length ==> subscriptions[i] != vehicleNum;
     ensures Valid();
     ensures subscriptionCount == old(subscriptionCount) + 1;
-    ensures subscriptionCount <= subscriptions.Length;
-    ensures exists i :: 0 <= i < subscriptions.Length && subscriptions[i] == vehicleNum;
-    modifies this`subscriptionCount, this.subscriptions;
+    ensures subscriptions[old(subscriptionCount)] == vehicleNum;
+    ensures forall i :: 0 <= i < old(subscriptionCount) ==> subscriptions[i] == old(subscriptions[i]);
+    ensures forall i :: old(subscriptionCount) < i < subscriptions.Length  ==> subscriptions[i] == old(subscriptions[i]);
+    modifies this.subscriptions, this`subscriptionCount;
   {
     subscriptions[subscriptionCount] := vehicleNum;
     subscriptionCount := subscriptionCount + 1;
