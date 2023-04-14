@@ -30,7 +30,7 @@ class MainDriver {
 
     //TEST ::  Trying to leave without the vehicle being in the normal space.
     //----------------------------------------------------------------------
-    //carPark.leaveFromNormalArea("xyz");
+    // carPark.leaveFromNormalArea(0);
 
     // Making subscriptions
     //------------------------
@@ -62,7 +62,7 @@ class MainDriver {
 
     //TEST ::  Leaving reserved areas when the vehicle is not there in it
     //-------------------------------------------------------------------
-    //carPark.leaveFromReservedArea("xyz");
+    //carPark.leaveFromReservedArea(0);
 
     // Closing the Car Park
     //-----------------------
@@ -424,7 +424,7 @@ class CarPark{
     requires Valid();
     ensures Valid();
   {
-    var columns: int := 4;
+    var columns: int := 3;
     print "\n\n\tAvailable Slots :: ";
     print totalAvailableSpaces;
     print "\n\n";
