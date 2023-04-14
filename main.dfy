@@ -24,7 +24,8 @@ class MainDriver {
 
     //leaving the normal parkinh slots
     //--------------------------------
-    carPark.leaveFromNormalArea("fgh");
+    carPark.leaveFromNormalArea(2);
+    carPark.leaveFromNormalArea(0);
     carPark.printParkingPlan();
 
     //TEST ::  Trying to leave without the vehicle being in the normal space.
@@ -55,7 +56,8 @@ class MainDriver {
 
     //Leaving reserved spaces
     //-----------------------
-    carPark.leaveFromReservedArea("qrs");
+    carPark.leaveFromReservedArea(4);
+    carPark.leaveFromReservedArea(0);
     carPark.printParkingPlan();
 
     //TEST ::  Leaving reserved areas when the vehicle is not there in it
@@ -240,26 +242,28 @@ class CarPark{
     Pre-Conditions
     --------------
     1. Valid();
-    2. The car should exist in one of the normal slots.
+    2. A vehicle should be in the slot (normalSlots[slot] != "-")
 
     Post-Conditions
     ---------------
     1. Valid()
     2. normalCarCount--;
-    3. Vehicle with the specific 'vehicleNum' should not be in any of the normal slots;
+    3. normalSlots[slot] == "-"
   */
-  method leaveFromNormalArea(vehicleNum: string)
+  method leaveFromNormalArea(slot: nat)
     requires Valid();
+    requires 0 <= slot < normalSlots.Length;
     requires normalCarCount > 0;
-    requires exists i :: 0 <= i < normalSlots.Length && normalSlots[i] == vehicleNum;
+    requires normalSlots[slot] != "-";
     ensures Valid();
-    ensures normalCarCount == old(normalCarCount) -1;
-    // ensures forall i :: 0 <= i < normalSlots.Length && normalSlots[i] != vehicleNum;
+    ensures normalCarCount == old(normalCarCount) - 1;
+    ensures normalSlots[slot] == "-";
+    ensures forall i :: 0 <= i < slot ==> normalSlots[i] == old(normalSlots[i]);
+    ensures forall i :: slot < i < normalSlots.Length  ==> normalSlots[i] == old(normalSlots[i]);
     modifies this.normalSlots, this`normalCarCount, this`totalAvailableSpaces;
   {
-    var slot := getVehicleFrom(normalSlots, vehicleNum);
     normalSlots[slot] := "-";
-    normalCarCount := normalCarCount -1;
+    normalCarCount := normalCarCount - 1;
     totalAvailableSpaces := checkAvailability();
   }
 
@@ -269,26 +273,28 @@ class CarPark{
     Pre-Conditions
     --------------
     1. Valid()
-    2. The car should exist in the reserved area.
+    2. A vehicle should be in the reserved spot (reservedSlots[slot] != "-").
 
     Post-Conditions
     ---------------
     1. Valid();
     2. reservedCarCount--;
-    3. Vehicle with the specific 'vehicleNum' should not be in any of the reserved slots;
+    3. reservedSlots[slot] == "-"
   */
-  method leaveFromReservedArea(vehicleNum: string)
+  method leaveFromReservedArea(slot: nat)
     requires Valid();
+    requires 0 <= slot < reservedSlots.Length;
     requires reservedCarCount > 0;
-    requires exists i :: 0 <= i < reservedSlots.Length && reservedSlots[i] == vehicleNum;
+    requires reservedSlots[slot] != "-";
     ensures Valid();
-    ensures reservedCarCount == old(reservedCarCount) -1;
-    // ensures forall i :: 0 <= i < reservedSlots.Length && reservedSlots[i] != vehicleNum;
+    ensures reservedCarCount == old(reservedCarCount) - 1;
+    ensures reservedSlots[slot] == "-";
+    ensures forall i :: 0 <= i < slot ==> reservedSlots[i] == old(reservedSlots[i]);
+    ensures forall i :: slot < i < reservedSlots.Length  ==> reservedSlots[i] == old(reservedSlots[i]);
     modifies this.reservedSlots, this`reservedCarCount, this`totalAvailableSpaces;
   {
-    var slot := getVehicleFrom(reservedSlots, vehicleNum);
     reservedSlots[slot] := "-";
-    reservedCarCount := reservedCarCount -1;
+    reservedCarCount := reservedCarCount - 1;
     totalAvailableSpaces := checkAvailability();
   }
 
