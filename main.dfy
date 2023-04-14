@@ -10,17 +10,18 @@ class MainDriver {
     var carPark := new CarPark(20, 10, 5, false);
     //Entering the normal parking space
     carPark.enterCarPark(0, "abc");
-    carPark.enterCarPark(1, "cdf");
+    carPark.enterCarPark(3, "cdf");
     carPark.enterCarPark(2, "fgh");
     carPark.enterCarPark(19, "hij");
     carPark.leaveFromNormalArea("fgh");
     carPark.printParkingPlan();
 
     // Making subscriptions
-    // carPark.makeSubscription("fgh");
+    carPark.makeSubscription("fgh");
+    carPark.makeSubscription("lmn");
 
     //Entering Reserved Spaces
-    // carPark.enterReservedCarPark("fgh");
+    // carPark.enterReservedArea(1, "fgh");
     // carPark.printParkingPlan();
 
     // Closing the Car Park
@@ -103,6 +104,7 @@ class CarPark{
   {
     reservedSlots.Length > 0 &&
     normalSlots.Length > 0 && 
+    subscriptions.Length > 0 && 
     normalSlots.Length == totalNormalSlots &&
     reservedSlots.Length == totalReservedSlots &&
     subscriptions.Length == totalReservedSlots &&
@@ -156,6 +158,26 @@ class CarPark{
   {
     normalSlots[slot] := vehicleNum;
     normalCarCount := normalCarCount + 1;
+    totalAvailableSpaces := checkAvailability();
+  }
+
+  method enterReservedArea(slot: nat, vehicleNum: string)
+    requires Valid();
+    requires 0 <= slot < reservedSlots.Length;
+    requires reservedSlots[slot] == "-";
+    requires reservedCarCount < totalReservedSlots;
+    requires forall i :: 0 <= i < normalSlots.Length ==> normalSlots[i] != vehicleNum;
+    requires forall i :: 0 <= i < reservedSlots.Length ==> reservedSlots[i] != vehicleNum;
+    requires exists i :: 0 <= i < subscriptions.Length && subscriptions[i] == vehicleNum;
+    ensures Valid();
+    ensures reservedCarCount == old(reservedCarCount) + 1;
+    ensures reservedSlots[slot] == vehicleNum;
+    ensures forall i :: 0 <= i < slot ==> reservedSlots[i] == old(reservedSlots[i]);
+    ensures forall i :: slot < i < reservedSlots.Length  ==> reservedSlots[i] == old(reservedSlots[i]);
+    modifies this.reservedSlots, this`reservedCarCount, this`totalAvailableSpaces;
+  {
+    reservedSlots[slot] := vehicleNum;
+    reservedCarCount := reservedCarCount + 1;
     totalAvailableSpaces := checkAvailability();
   }
 
@@ -216,57 +238,6 @@ class CarPark{
     }
   }
 
-  // to allow a car with a subscription to enter the car park's reservered area on a weekday,
-  // or to enter the carpark generally on a weekend day.
-  ////////////////////////////////////////////////////////////////////////////////////////////
-  /*
-    Pre-conditions
-    --------------
-    1. Valid()
-    2. Vehicle Should Not be in the normal space
-    3. vehicle should have a subscription.
-    4. Vehicle should not be in the Reserved area already.
-
-    Post-Conditions
-    ---------------
-    1. Valid()
-    2. Ensures the vehicle is now in the reserved area.
-  */
-  // method enterReservedCarPark(vehicleNum: string)
-  //   requires Valid();
-  //   // requires forall i :: 0 <= i < normalSlots.Length && normalSlots[i] != vehicleNum;
-  //   // requires forall i :: 0 <= i < reservedSlots.Length && reservedSlots[i] != vehicleNum;
-  //   // requires exists i :: 0 <= i < subscriptions.Length && subscriptions[i] == vehicleNum;
-  //   ensures Valid();
-  //   // ensures exists i :: 0 <= i < reservedSlots.Length && reservedSlots[i] == vehicleNum;
-  //   modifies this.reservedSlots, this`totalAvailableSpaces;
-  // {
-  //   var slot: int;
-  //   slot := getVehicleFrom(reservedSlots, vehicleNum);
-
-  //   if(slot == -1){
-  //     slot := getFreeSlot(normalSlots);
-  //     var hasSubscription := hasSubscription(vehicleNum);
-  //     if(hasSubscription){
-  //       if(slot > -1 && slot < reservedSlots.Length){
-  //         reservedSlots[slot] := vehicleNum;
-  //         totalAvailableSpaces := checkAvailability();
-  //         print "\n\n\t>>> Vehicle [" + vehicleNum + "] Parked in Reserved Space";
-  //       }
-  //       else{
-  //         print "\n\n\t>>> RESERVED AREA FULL !";
-  //       }
-  //     }
-  //     else{
-  //       print "\n\n\t>>> VEHICLE [" + vehicleNum + "] HAS NO SUBSCRIPTIONS !";
-  //     }
-        
-  //   }
-  //   else{
-  //     print "\n\n\t>>> VEHICLE [" + vehicleNum + "] Already in !";
-  //   }
-  // }
-
 
   // to allow a car to be registered as a having a reserved space when the owner pays the subscription,
   // AS LONG AS SUBSCRIPTIONS ARE AVAIALBLE
@@ -286,40 +257,15 @@ class CarPark{
   method makeSubscription(vehicleNum: string)
     requires Valid();
     requires subscriptionCount >= 0 && subscriptionCount < subscriptions.Length;
-    requires forall i :: 0 <= i < subscriptions.Length ==> subscriptions[i] != vehicleNum;
+    // requires forall i :: 0 <= i < subscriptions.Length && subscriptions[i] != vehicleNum;
     ensures Valid();
     ensures subscriptionCount == old(subscriptionCount) + 1;
+    ensures subscriptionCount <= subscriptions.Length;
     ensures exists i :: 0 <= i < subscriptions.Length && subscriptions[i] == vehicleNum;
     modifies this`subscriptionCount, this.subscriptions;
   {
     subscriptions[subscriptionCount] := vehicleNum;
     subscriptionCount := subscriptionCount + 1;
-  }
-
-  //Method for checking whther a car has a subscrition
-  ///////////////////////////////////////////////////////
-  /*
-    Pre-conditions
-    --------------
-    1. Valid()
-
-    Post-conditions
-    ---------------
-    1. Valid()
-  */
-  method hasSubscription(vehicleNum: string) returns (result: bool)
-    requires Valid();
-    ensures Valid();
-  {
-    for i := 0 to subscriptions.Length
-    {
-      if(subscriptions[i] == vehicleNum){
-        result := true;
-        break;
-      }
-    }
-
-    result := false;
   }
 
   // to remove parking restrictions on the reserved spaces
@@ -447,32 +393,6 @@ class CarPark{
     for i := 0 to arr.Length
     {
       if(arr[i] == vehicleNum){
-        slot := i;
-        break;
-      }
-    }
-  }
-
-  //Method for returning the index of the first Freeslot
-  /////////////////////////////////////////////////////////
-  /*
-    Pre-conditions
-    --------------
-    1. Valid()
-
-    Post-conditions
-    ---------------
-    1. Valid()
-    2. slot >= -1 && slot < arr.Length
-  */
-  method getFreeSlot(arr: array<string>) returns (slot: int)
-    requires Valid();
-    ensures Valid();
-    ensures slot >= -1 && slot < arr.Length;
-  {
-    slot := -1;
-    for i := 0 to arr.Length{
-      if(arr[i] == "-"){
         slot := i;
         break;
       }
