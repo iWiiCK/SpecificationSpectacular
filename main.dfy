@@ -9,14 +9,27 @@ class MainDriver {
 
     var carPark := new CarPark(20, 10, 5, false);
 
+    //SCENARIOS
     //Entering the normal parking space
     //-----------------------------------
     carPark.enterCarPark(0, "abc");
     carPark.enterCarPark(3, "cdf");
     carPark.enterCarPark(2, "fgh");
     carPark.enterCarPark(19, "hij");
+    carPark.printParkingPlan();
+
+    //TEST :: trying to enter 2 vehicles with the same vehicle number
+    //--------------------------------------------------------------
+    //carPark.enterCarPark(0, "abc");
+
+    //leaving the normal parkinh slots
+    //--------------------------------
     carPark.leaveFromNormalArea("fgh");
     carPark.printParkingPlan();
+
+    //TEST ::  Trying to leave without the vehicle being in the normal space.
+    //----------------------------------------------------------------------
+    //carPark.leaveFromNormalArea("xyz");
 
     // Making subscriptions
     //------------------------
@@ -25,17 +38,41 @@ class MainDriver {
     carPark.makeSubscription("qrs");
     carPark.makeSubscription("tuv");
 
+    //TEST :: Making the same subscription twise
+    //------------------------------------------
+    //carPark.makeSubscription("tuv");
+
     //Entering Reserved Spaces
     //------------------------------
     carPark.enterReservedArea(0, "fgh");
     carPark.enterReservedArea(4, "lmn");
     carPark.enterReservedArea(1, "qrs");
+    carPark.printParkingPlan();
+
+    //TEST :: Entering Without Subscriptions
+    //------------------------------
+    // carPark.enterReservedArea(5, "xyz");
+
+    //Leaving reserved spaces
+    //-----------------------
     carPark.leaveFromReservedArea("qrs");
     carPark.printParkingPlan();
+
+    //TEST ::  Leaving reserved areas when the vehicle is not there in it
+    //-------------------------------------------------------------------
+    //carPark.leaveFromReservedArea("xyz");
 
     // Closing the Car Park
     //-----------------------
     carPark.closeCarPark();
+
+    //Opening the reserved area/ Changing to a Weekday
+    //------------------------------------------------
+    carPark.openReservedArea(true);
+
+    //TEST ::  Adding a new Car after (Available slot count should now be 30 instead of 20)
+    //-------------------------------------------------------------------------------------
+    carPark.enterCarPark(0, "abc");
     carPark.printParkingPlan();
   }
 }
@@ -209,6 +246,7 @@ class CarPark{
     ---------------
     1. Valid()
     2. normalCarCount--;
+    3. Vehicle with the specific 'vehicleNum' should not be in any of the normal slots;
   */
   method leaveFromNormalArea(vehicleNum: string)
     requires Valid();
@@ -216,6 +254,7 @@ class CarPark{
     requires exists i :: 0 <= i < normalSlots.Length && normalSlots[i] == vehicleNum;
     ensures Valid();
     ensures normalCarCount == old(normalCarCount) -1;
+    // ensures forall i :: 0 <= i < normalSlots.Length && normalSlots[i] != vehicleNum;
     modifies this.normalSlots, this`normalCarCount, this`totalAvailableSpaces;
   {
     var slot := getVehicleFrom(normalSlots, vehicleNum);
@@ -236,6 +275,7 @@ class CarPark{
     ---------------
     1. Valid();
     2. reservedCarCount--;
+    3. Vehicle with the specific 'vehicleNum' should not be in any of the reserved slots;
   */
   method leaveFromReservedArea(vehicleNum: string)
     requires Valid();
@@ -243,6 +283,7 @@ class CarPark{
     requires exists i :: 0 <= i < reservedSlots.Length && reservedSlots[i] == vehicleNum;
     ensures Valid();
     ensures reservedCarCount == old(reservedCarCount) -1;
+    // ensures forall i :: 0 <= i < reservedSlots.Length && reservedSlots[i] != vehicleNum;
     modifies this.reservedSlots, this`reservedCarCount, this`totalAvailableSpaces;
   {
     var slot := getVehicleFrom(reservedSlots, vehicleNum);
@@ -346,11 +387,14 @@ class CarPark{
     Post-conditions
     ---------------
     1. Valid()
+    2. All slots in normal and reserved spaces should be default values.
   */
   method closeCarPark()
     requires Valid();
     ensures Valid();
     modifies this.normalSlots, this.reservedSlots, this`totalAvailableSpaces;
+    ensures forall i :: 0 <= i < normalSlots.Length ==> normalSlots[i] == "-";
+    ensures forall i :: 0 <= i < reservedSlots.Length ==> reservedSlots[i] == "-";
   {
     print "\n\n\tCLOSING CAR PARK (CRUSHING REMAINING CARS)\n\n";
 
