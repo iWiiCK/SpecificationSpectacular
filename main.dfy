@@ -27,13 +27,16 @@ class MainDriver {
 
     //Entering Reserved Spaces
     //------------------------------
-    // carPark.enterReservedArea(0, "fgh");
-    // carPark.printParkingPlan();
+    carPark.enterReservedArea(0, "fgh");
+    carPark.enterReservedArea(4, "lmn");
+    carPark.enterReservedArea(1, "qrs");
+    carPark.leaveFromReservedArea("qrs");
+    carPark.printParkingPlan();
 
     // Closing the Car Park
     //-----------------------
-    // carPark.closeCarPark();
-    // carPark.printParkingPlan();
+    carPark.closeCarPark();
+    carPark.printParkingPlan();
   }
 }
 
@@ -55,19 +58,6 @@ class CarPark{
 
   //Constructor for setting the car park for a new day.
   ////////////////////////////////////////////////////////////
-  /*
-    Pre-conditions
-    ---------------
-    1. Total Freespaces > reserved spaces.
-    2. Total Freespaces, Reserved spaces and parkingMargin must be > 0
-    3. totalReservedSlots > parkingMargin
-    4. totalFreespaces - reserved spaces > parkingMargin
-
-    Post Condions
-    -------------
-    1. Valid()
-    2. normalSlots && reservedSlots must be fresh arrays.
-  */
   constructor(totalNormalSlots: int, totalReservedSlots: int, parkingMargin: int, isWeekend: bool)
     requires totalNormalSlots > parkingMargin && totalReservedSlots > parkingMargin
     requires totalNormalSlots > totalReservedSlots;
@@ -93,6 +83,7 @@ class CarPark{
     new;
     normalSlots := new string[totalNormalSlots];
     reservedSlots := new string[totalReservedSlots];
+    //Initializing strings to a default value to compare later in contracts
     subscriptions := new string[totalReservedSlots](_ => "*");
 
     normalCarCount := 0;
@@ -147,7 +138,7 @@ class CarPark{
     Post-Conditions
     ---------------
     1. Valid()
-    2. The vehicle should exist in one of the spaces
+    2. normalSlots[slot] == vehicle
   */
   method enterCarPark(slot: nat, vehicleNum: string)
     requires Valid();
@@ -169,12 +160,29 @@ class CarPark{
     totalAvailableSpaces := checkAvailability();
   }
 
+  //Allowing a car with a subscription to enter the reserved area
+  ////////////////////////////////////////////////////////////////
+  /*
+    Pre-Conditions
+    --------------
+    1. Valid()
+    2. reservedSlots[slot] must be an empty one.
+    3. Vehicle should not be in the Reserved area already.
+    4. Vehicle should not be in the normal space either.
+    5. The Vehicle should have a subscription
+
+    Post-Conditions
+    ---------------
+    1. Valid()
+    2. reservedCarCount++;
+    3. reservedSlots[slot] == vehicleNum
+  */
   method enterReservedArea(slot: nat, vehicleNum: string)
     requires Valid();
     requires 0 <= slot < reservedSlots.Length;
     requires reservedCarCount < totalReservedSlots;
     requires reservedSlots[slot] == "-";
-    requires forall i :: 0 <= i < normalSlots.Length ==> normalSlots[i] != vehicleNum;
+    // requires forall i :: 0 <= i < normalSlots.Length ==> normalSlots[i] != vehicleNum;
     requires forall i :: 0 <= i < reservedSlots.Length ==> reservedSlots[i] != vehicleNum;
     requires exists i :: 0 <= i < totalReservedSlots && subscriptions[i] == vehicleNum;
     ensures Valid();
@@ -189,7 +197,19 @@ class CarPark{
     totalAvailableSpaces := checkAvailability();
   }
 
+  //Allowing a car in the normal area to Leave
+  ////////////////////////////////////////////////
+  /*
+    Pre-Conditions
+    --------------
+    1. Valid();
+    2. The car should exist in one of the normal slots.
 
+    Post-Conditions
+    ---------------
+    1. Valid()
+    2. normalCarCount--;
+  */
   method leaveFromNormalArea(vehicleNum: string)
     requires Valid();
     requires normalCarCount > 0;
@@ -204,6 +224,19 @@ class CarPark{
     totalAvailableSpaces := checkAvailability();
   }
 
+  //Allowing a car in the Reserved Area to Leave
+  /////////////////////////////////////////////////
+  /*
+    Pre-Conditions
+    --------------
+    1. Valid()
+    2. The car should exist in the reserved area.
+
+    Post-Conditions
+    ---------------
+    1. Valid();
+    2. reservedCarCount--;
+  */
   method leaveFromReservedArea(vehicleNum: string)
     requires Valid();
     requires reservedCarCount > 0;
@@ -254,29 +287,16 @@ class CarPark{
     Pre-conditions
     --------------
     1. Valid();
-    2. subscriptionCount < subscriptions.Length
-    3. vehicleNum should not be in the array
+    2. 0 <= subscriptionCount < subscriptions.Length
+    3. A previous subscription should not be there (in the index).
+    4. A previous subscription should not be there anywhere in the collection.
 
     Post-Conditions
     ---------------
     1. Valid();
     2. Subscription should now be in the array.
+    3. subscriptionCount++;
   */
-  // method makeSubscription(vehicleNum: string)
-  //   requires Valid();
-  //   requires subscriptionCount >= 0 && subscriptionCount < subscriptions.Length;
-  //   // requires forall i :: 0 <= i < subscriptions.Length && subscriptions[i] != vehicleNum;
-  //   ensures Valid();
-  //   ensures subscriptions[old(subscriptionCount)] == vehicleNum;
-  //   ensures subscriptionCount == old(subscriptionCount) + 1;
-  //   ensures exists i :: 0 <= i < subscriptions.Length && subscriptions[i] == vehicleNum;
-  //   ensures subscriptionCount <= totalReservedSlots;
-  //   modifies this`subscriptionCount, this.subscriptions;
-  // {
-  //   subscriptions[subscriptionCount] := vehicleNum;
-  //   subscriptionCount := subscriptionCount + 1;
-  // }
-
   method makeSubscription(vehicleNum: string)
     requires Valid();
     requires 0 <= subscriptionCount < subscriptions.Length;
