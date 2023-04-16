@@ -470,35 +470,6 @@ class CarPark{
     print "\n\n";
   }
 
-  //Method for Getting the vehicle slot from normal or reserved spaces
-  //////////////////////////////////////////////////////////////////////
-  /*
-    Pre-conditions
-    --------------
-    1. Valid()
-
-    Post-conditions
-    ---------------
-    1. Valid()
-    2. slot >= -1 && slot < arr.Length
-  */
-  method getVehicleFrom(arr: array<string>, vehicleNum: string) returns (slot: int)
-    requires Valid();
-    requires arr == normalSlots || arr == reservedSlots;
-    requires exists i :: 0 <= i < arr.Length && arr[i] == vehicleNum;
-    ensures Valid();
-    ensures slot >= 0 && slot < arr.Length;
-  {
-    slot := 0;
-    for i := 0 to arr.Length
-    {
-      if(arr[i] == vehicleNum){
-        slot := i;
-        break;
-      }
-    }
-  }
-
   //Method for counting Free slots given the parking array
   //////////////////////////////////////////////////////////
   /*
