@@ -403,8 +403,11 @@ class CarPark{
     requires Valid();
     ensures Valid();
     modifies this.normalSlots, this.reservedSlots, this`totalAvailableSpaces;
+    modifies this`normalCarCount, this`reservedCarCount;
     ensures forall i :: 0 <= i < normalSlots.Length ==> normalSlots[i] == "-";
     ensures forall i :: 0 <= i < reservedSlots.Length ==> reservedSlots[i] == "-";
+    ensures HasSpaceToEnterVehicle();
+    ensures reservedCarCount < totalReservedSlots;
   {
     print "\n\n\tCLOSING CAR PARK (CRUSHING REMAINING CARS)\n\n";
 
@@ -514,7 +517,8 @@ class CarPark{
     requires Valid();
     ensures Valid();
     ensures forall i :: 0 <= i < normalSlots.Length ==> normalSlots[i] == "-";
-    modifies normalSlots
+    ensures normalCarCount == 0;
+    modifies normalSlots, this`normalCarCount
   {
     for i := 0 to normalSlots.Length
       invariant i <= normalSlots.Length;
@@ -522,6 +526,8 @@ class CarPark{
     {
       normalSlots[i] := "-";
     }
+
+    normalCarCount := 0;
   }
 
   //Method for clearing Reserved Spaces
@@ -540,7 +546,8 @@ class CarPark{
     requires Valid();
     ensures Valid();
     ensures forall i :: 0 <= i < reservedSlots.Length ==> reservedSlots[i] == "-";
-    modifies reservedSlots
+    ensures reservedCarCount == 0;
+    modifies reservedSlots, this`reservedCarCount;
   {
     for i := 0 to reservedSlots.Length
       invariant i <= reservedSlots.Length;
@@ -548,5 +555,7 @@ class CarPark{
     {
       reservedSlots[i] := "-";
     }
+
+    reservedCarCount := 0;
   }
 }
